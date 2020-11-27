@@ -1,7 +1,7 @@
 pipeline {
     environment {
         repo_name = "xxxx.dkr.ecr.us-east-1.amazonaws.com"
-            registry = "$repo_name/asg_ecs_iorch_esb_repo"
+            registry = "$repo_name/<codeCommit>_repo"
             region = "us-east-1"
     }
     agent any
