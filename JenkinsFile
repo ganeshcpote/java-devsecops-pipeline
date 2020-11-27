@@ -1,0 +1,194 @@
+pipeline {
+    environment {
+        repo_name = "xxxx.dkr.ecr.us-east-1.amazonaws.com"
+            registry = "$repo_name/asg_ecs_iorch_esb_repo"
+            region = "us-east-1"
+    }
+    agent any
+    parameters {
+        choice(choices: ['petproject-java'], description: 'Specify Git Repository Name', name: 'git_repo')
+        choice(choices: ['gp-devsecops', 'master'], description: 'Specify Git Repository Branch Name', name: 'git_branch')
+    }
+
+    stages {
+        stage("SCM Checkout") {
+            steps {
+                git branch: '$git_branch',
+                credentialsId: 'AWS',
+                url: 'https://git-codecommit.us-east-1.amazonaws.com/v1/repos/$git_repo'
+            }
+        }
+        stage('Code Build') {
+            steps {
+                script {
+                    timeout(time: 60, unit: 'MINUTES') {
+                        sh "mvn clean package -U -Dmaven.test.skip=true"
+						COMMIT_HASH = sh(returnStdout: true, script: 'git rev-parse HEAD | cut -c 1-7').trim()
+                    }
+                }
+                recordIssues enabledForFailure: false,
+                aggregatingResults: true,
+                tools: [mavenConsole(), java(), javaDoc()]
+            }
+        }
+        stage('Run Test') {
+            parallel {
+                stage('Run JUnit Test') {
+                    steps {
+                        script {
+                            sh "mvn -fn verify -Dmaven.test.failure.ignore=true"
+                        }
+                        junit testResults: '**/target/surefire-reports/TEST-*.xml', 
+								allowEmptyResults:true
+                    }
+                }
+                stage('Open Task Scanner') {
+                    steps {
+                        recordIssues enabledForFailure: false,
+                        aggregatingResults: true,
+                        tool: taskScanner(includePattern: '**/*.java', excludePattern: 'target/**/*', highTags: 'FIXME', normalTags: 'TODO', reportEncoding: 'UTF-8'),
+                        sourceCodeEncoding: 'UTF-8'
+                    }
+                }
+            }
+        }
+        stage('PMD Analysis') {
+            parallel {
+                stage('CheckStype') {
+                    steps {
+                        script {
+                            timeout(time: 60, unit: 'MINUTES') {
+                                sh 'mvn org.apache.maven.plugins:maven-checkstyle-plugin:3.1.1:check  -Dcheckstyle.failOnViolation=false -DfailsOnError=false'
+                            }
+                        }
+                        recordIssues enabledForFailure: false,
+                        aggregatingResults: true,
+                        tool: checkStyle(pattern: 'target/checkstyle-result.xml', reportEncoding: 'UTF-8')
+                    }
+                }
+                stage('PMD') {
+                    steps {
+                        script {
+                            timeout(time: 60, unit: 'MINUTES') {
+                                sh 'mvn org.apache.maven.plugins:maven-pmd-plugin:3.14.0:pmd -Dpmd.failOnViolation=false'
+                            }
+                        }
+                        recordIssues enabledForFailure: false,
+                        aggregatingResults: true,
+                        tool: pmdParser(pattern: 'target/pmd.xml', reportEncoding: 'UTF-8')
+                    }
+                }
+                stage('Duplicate Code') {
+                    steps {
+                        script {
+                            timeout(time: 60, unit: 'MINUTES') {
+                                sh 'mvn org.apache.maven.plugins:maven-pmd-plugin:3.14.0:cpd -Dcpd.failOnViolation=false'
+                            }
+                        }
+                        recordIssues enabledForFailure: false,
+                        aggregatingResults: true,
+                        tool: cpd(pattern: 'target/cpd.xml', reportEncoding: 'UTF-8')
+                    }
+                }
+            }
+        }
+        stage('Bugs Analysis') {
+            parallel {
+                stage('FindBugs') {
+                    steps {
+                        script {
+                            timeout(time: 60, unit: 'MINUTES') {
+                                sh 'mvn org.codehaus.mojo:findbugs-maven-plugin:3.0.5:findbugs -Dtimeout=3600000 -Dfindbugs.timeout=3600000'
+                            }
+                        }
+                        recordIssues enabledForFailure: false,
+                        aggregatingResults: true,
+                        tool: spotBugs(id: "findbugs", name: "FindBugs", pattern: 'target/findbugsXml.xml', reportEncoding: 'UTF-8')
+                    }
+                }
+                stage('SpotBugs') {
+                    steps {
+                        script {
+                            timeout(time: 60, unit: 'MINUTES') {
+                                sh 'mvn com.github.spotbugs:spotbugs-maven-plugin:4.1.4:spotbugs -Dtimeout=3600000 -Dspotbugs.timeout=3600000'
+                            }
+                        }
+                        recordIssues enabledForFailure: false,
+                        aggregatingResults: true,
+                        tool: spotBugs(id: "spotbugs", name: "SpotBugs", pattern: 'target/spotbugsXml.xml', reportEncoding: 'UTF-8')
+                    }
+                }
+            }
+        }
+        stage('OWASP Dependency-Check Vulnerabilities') {
+            steps {
+                script {
+                    timeout(time: 60, unit: 'MINUTES') {
+                        sh 'mvn org.owasp:dependency-check-maven:6.0.3:check -Dformat=ALL'
+                    }
+                }
+                dependencyCheckPublisher pattern: 'target/dependency-check-report.xml'
+
+                archiveArtifacts allowEmptyArchive: true,
+                artifacts: 'target/dependency-check-report.*',
+                onlyIfSuccessful: true
+            }
+        }
+
+        stage('Code Quality Check via SonarQube') {
+            steps {
+                script {
+                    timeout(time: 60, unit: 'MINUTES') {
+                        sh "mvn sonar:sonar \
+                        -Dsonar.host.url=http://127.0.0.1:9000 \
+                        -Dsonar.login=42ebe190fef361e9caa1c09f60f7ffdc725204c4 \
+                        -Dmaven.test.skip=true \
+                        -Dsonar.projectKey=test-java-project \
+                        -Dsonar.dependencyCheck.jsonReportPath=target/dependency-check-report.json \
+                        -Dsonar.dependencyCheck.xmlReportPath=target/dependency-check-report.xml \
+                        -Dsonar.dependencyCheck.htmlReportPath=target/dependency-check-report.html"
+                    }
+                }
+            }
+        }
+        stage('Building Docker image') {
+            steps {
+                timeout(time: 60, unit: 'MINUTES') {
+                    script {
+                        sh "aws ecr get-login-password --region $region | docker login --username AWS --password-stdin $repo_name"
+                        sh "docker build -t $registry:$COMMIT_HASH ."
+                    }
+                }
+            }
+        }
+        stage('Deploy Docker Image') {
+            steps {
+                timeout(time: 60, unit: 'MINUTES') {
+                    script {
+                        sh "aws ecr get-login-password --region $region | docker login --username AWS --password-stdin $repo_name"
+                        sh "docker push $registry:$COMMIT_HASH"
+                    }
+                }
+            }
+        }
+        stage('Anchore Docker Scan') {
+            steps {
+                timeout(time: 60, unit: 'MINUTES') {
+                    script {
+                        sh "aws ecr get-login-password --region $region | docker login --username AWS --password-stdin $repo_name"
+                        def imageLine = "$registry:$COMMIT_HASH"
+                            writeFile file: 'anchore_images',
+                        text: imageLine
+                        anchore name: 'anchore_images'
+                    }
+                }
+            }
+        }
+    }
+    post {
+        cleanup {
+            echo 'One way or another, I have finished'
+            deleteDir() /*clean up our workspace */
+        }
+    }
+}
