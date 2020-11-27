@@ -29,7 +29,7 @@ Following section shows individual report and their reporting screenshots
 ![reportsImport](/images/testresult.png)
 
 2. PMD Warnings
-![reportsImport](/images/pmd1.png)
+![reportsImport](/images/pmd11.png)
 ![reportsImport](/images/pmd2.png)
 
 3. FingBugs Warnings
