@@ -19,6 +19,13 @@ Following stages are present in current DevSecOps Jenkins Pipeline
 12. Building Docker Image
 13. Deploy Docker Image
 14. Anchor Docker Scan
+    Configure Anchor : 
+    mkdir ~/anchor
+    cd ~/anchor
+    curl https://docs.anchore.com/current/docs/engine/quickstart/docker-compose.yaml > docker-compose.yaml
+    docker-compose up -d
+    Jenkins Config :
+    ![config](/images/anchor-config.png)
 
 ## Type of Reports
 ![reportsImport](/images/reports.png)
