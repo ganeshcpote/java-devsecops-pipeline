@@ -21,8 +21,10 @@ Following stages are present in current DevSecOps Jenkins Pipeline
 14. Anchor Docker Scan
 
 ## Type of Reports
+Jenkins shows following reports in left navigation once pipeline is executed succesfully
 ![reportsImport](/images/reports.png)
 
+Following section shows individual report and their reporting screenshots
 1. Test Result
 ![reportsImport](/images/testresult.png)
 
