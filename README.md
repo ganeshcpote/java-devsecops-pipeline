@@ -27,6 +27,13 @@ Following stages are present in current DevSecOps Jenkins Pipeline
     Jenkins Config :</br>
     ![config](/images/anchor-config.png)
 
+## Jenkins Plugin
+1. Anchore Container Image Scanner Plugin
+2. Report Info Plugin
+3. Violations plugin
+4. Warnings Next Generation Plugin
+5. Test Results Analyzer Plugin
+
 ## Type of Reports
 ![reportsImport](/images/reports.png)
 
