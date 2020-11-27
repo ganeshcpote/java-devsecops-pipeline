@@ -33,6 +33,7 @@ Following stages are present in current DevSecOps Jenkins Pipeline
 3. Violations plugin
 4. Warnings Next Generation Plugin
 5. Test Results Analyzer Plugin
+6. OWASP Dependency-Check Plugin
 
 ## Type of Reports
 ![reportsImport](/images/reports.png)
