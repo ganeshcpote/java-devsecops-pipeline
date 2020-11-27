@@ -18,19 +18,19 @@ Following stages are present in current DevSecOps Jenkins Pipeline
 11. SonarQube Analysis
 12. Building Docker Image
 13. Deploy Docker Image
-14. Anchor Docker Scan
-    Configure Anchor : 
-    mkdir ~/anchor
-    cd ~/anchor
-    curl https://docs.anchore.com/current/docs/engine/quickstart/docker-compose.yaml > docker-compose.yaml
-    docker-compose up -d
-    Jenkins Config :
+14. Anchor Docker Scan </br>
+    Configure Anchor : </br>
+    mkdir ~/anchor</br>
+    cd ~/anchor</br>
+    curl https://docs.anchore.com/current/docs/engine/quickstart/docker-compose.yaml > docker-compose.yaml</br>
+    docker-compose up -d</br>
+    Jenkins Config :</br>
     ![config](/images/anchor-config.png)
 
 ## Type of Reports
 ![reportsImport](/images/reports.png)
 
-Following section shows individual report and their reporting screenshots
+Following section shows individual report and their reporting screenshots</br>
 1. Test Result
 ![reportsImport](/images/testresult.png)
 
