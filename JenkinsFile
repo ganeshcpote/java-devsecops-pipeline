@@ -179,7 +179,7 @@ pipeline {
                         def imageLine = "$registry:$COMMIT_HASH"
                             writeFile file: 'anchore_images',
                         text: imageLine
-                        anchore name: 'anchore_images'
+                        anchore name: 'anchore_images', bailOnFail: false
                     }
                 }
             }
