@@ -3,6 +3,9 @@ pipeline {
         repo_name = "xxxx.dkr.ecr.us-east-1.amazonaws.com"
             registry = "$repo_name/<codeCommit>_repo"
             region = "us-east-1"
+	    cluster = "xxx-cluster"
+            service = "xxx-api-svc"
+            task_definition = "xxx-api-task"
     }
     agent any
     parameters {
@@ -180,6 +183,26 @@ pipeline {
                             writeFile file: 'anchore_images',
                         text: imageLine
                         anchore name: 'anchore_images', bailOnFail: false
+                    }
+                }
+            }
+        }
+	stage('Deploy Docker to ECS') {
+            steps {
+                timeout(time: 60, unit: 'MINUTES') {
+                    script {
+                        sh "sed -e 's;DOCKER_IMAGE_NAME;$registry:$COMMIT_HASH;g' ${WORKSPACE}/scripts/template.json > taskDefinition.json"
+			echo "Create new task definition with latest docker image...."
+                        sh "aws ecs register-task-definition --cli-input-json file://taskDefinition.json --region $region"
+						
+			REVISION = sh(returnStdout: true, script: "echo `aws ecs describe-task-definition --task-definition $task_definition --region $region | grep 'revision' | tr -s ' ' | cut -d ' ' -f 3`").trim()						
+			TASK = sh(returnStdout: true, script: "echo `aws ecs list-tasks --cluster arn:aws:ecs:$region:72xxx:cluster/$cluster  --service-name $service --query '[taskArns]' --output text --region $region`").trim()
+						
+			echo "Stopping existing task...."
+			sh "aws ecs stop-task --task $TASK --cluster  $cluster --region  $region"
+					
+			echo "Update Service with new task definition...."
+                        sh "aws ecs update-service --cluster $cluster --service $service --task-definition $task_definition:$REVISION --desired-count 1"
                     }
                 }
             }
