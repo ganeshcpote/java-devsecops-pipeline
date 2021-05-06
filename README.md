@@ -1,4 +1,4 @@
-# DevSecOps Pipeline for Java Projects
+# DevSecOps Docker Deployment Pipeline for Java Projects
 
 ## Pipeline Overview
 ![pipelineImport](/images/pipelineoverview.png)
