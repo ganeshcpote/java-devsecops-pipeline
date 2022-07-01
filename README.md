@@ -22,7 +22,7 @@ Following stages are present in current DevSecOps Jenkins Pipeline
     Configure Anchor : </br>
     mkdir ~/anchor</br>
     cd ~/anchor</br>
-    curl https://docs.anchore.com/current/docs/engine/quickstart/docker-compose.yaml > docker-compose.yaml</br>
+    curl https://raw.githubusercontent.com/anchore/anchore-engine/master/docker-compose-dev.yaml > docker-compose.yaml</br>
     docker-compose up -d</br>
     Jenkins Config :</br>
     ![config](/images/anchor-config.png)
